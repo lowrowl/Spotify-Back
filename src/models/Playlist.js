@@ -1,12 +1,19 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const PlaylistSchema = new mongoose.Schema({
-    idPlaylist: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    image: { type: String, required: true },
-    idSong: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Songs' }],
+  name: { type: String, required: true },
+  songs: [
+    {
+      id: { type: String, unique: true },
+      name: String,
+      artists: [String], // Cambia a un arreglo de cadenas
+      album: String,
+      releaseDate: String,
+      imageUrl: String,
+    },
+  ],
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  createdAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.model('Playlist', PlaylistSchema);
-
-
+module.exports = mongoose.model('Playlist', PlaylistSchema);
