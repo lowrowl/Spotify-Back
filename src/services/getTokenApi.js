@@ -7,7 +7,7 @@ import axios from 'axios';
 
 configDotenv();
 
-const endpoints = extractJSON({ path: "./configs/endpoints.json" });
+const endpoints = extractJSON({ path: "endpoints.json" });
 const urlAuthorization = endpoints["token"];
 
 const secretsList = [

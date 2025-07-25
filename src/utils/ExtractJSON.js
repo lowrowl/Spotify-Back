@@ -1,14 +1,19 @@
-// src/utils/extractJSON.js
-import { createRequire } from "node:module";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const require = createRequire(import.meta.url);
-
-const extractJSON = ({ path }) => {
+const extractJSON = ({ path: relativePath }) => {
   try {
-    // Importa el JSON. Asegúrate de que la ruta sea correcta desde el punto de vista del archivo que lo llama.
-    return require(path);
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    // Construye la ruta desde src/config/
+    const absolutePath = path.resolve(__dirname, '../config', relativePath);
+
+    const rawData = fs.readFileSync(absolutePath, 'utf-8');
+    return JSON.parse(rawData);
   } catch (error) {
-    console.log(`Hubo un error al importar json desde ${path}. Error: ${error.message}`);
+    console.error(`❌ Hubo un error al importar json desde ${relativePath}. Error: ${error.message}`);
     return false;
   }
 };

@@ -1,9 +1,9 @@
 // src/services/apiFetch.js
-import extractJSON from "../utils/extractJSON.js";
+import extractJSON from "../utils/ExtractJSON.js";
 import { getTokenAPi } from "./getTokenApi.js"; // Importa la nueva función de obtención de token
 
 // Asegúrate de que la ruta a endpoints.json sea correcta desde la ubicación de apiFetch.js
-const endpoints = extractJSON({ path: "./src/configs/endpoints.json" }); // Ajusta la ruta si es necesario
+const endpoints = extractJSON({ path: "endpoints.json" }); // ✅ Solo el nombre del archivo
 const initialQuery = "?q=";
 
 export const apiFetch = async ({ type, option = false, body }) => {
