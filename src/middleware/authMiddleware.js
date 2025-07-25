@@ -1,20 +1,36 @@
 import jwt from 'jsonwebtoken';
-// No necesitas 'require' aquí si jwt es un módulo ES o un paquete npm
-// Si tienes algún problema con jwt, puede que necesites import * as jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
-const authenticateUser = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', ''); // Usa optional chaining por seguridad
-  if (!token) {
-    return res.status(401).json({ error: 'Acceso denegado. No se proporcionó un token.' });
+export const authenticateUser = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token no proporcionado' });
   }
 
+  const token = authHeader.split(' ')[1];
+
   try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET || 'secreto');
-    req.user = verified;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Token inválido' });
+    console.error('Error de autenticación:', error);
+    res.status(401).json({ error: 'Token inválido o expirado' });
   }
 };
 
-export { authenticateUser }; // Exportación nombrada
+export const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Acceso denegado: Rol no autorizado' });
+    }
+    next();
+  };
+};
