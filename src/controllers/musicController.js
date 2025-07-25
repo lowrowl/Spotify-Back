@@ -2,7 +2,7 @@ import {
   searchTracksDeezer,
   getTrackByIdDeezer,
   getPopularTracksDeezer
-} from '../services/DeezerService.js';
+} from '../services/deezerServices.js';
 
 /**
  * Buscar canciones por nombre, artista, álbum, etc.
@@ -113,3 +113,33 @@ export const getHomeData = async (req, res) => {
   }
 };
 
+export const getRecommendations = async (req, res) => {
+  try {
+    const { trackId } = req.params;
+    if (!trackId) {
+      return res.status(400).json({ error: 'trackId es requerido' });
+    }
+
+    const recommendations = await getRecommendedTracks(trackId);
+    return res.json(recommendations);
+  } catch (error) {
+    console.error('Error obteniendo recomendaciones:', error.message);
+    return res.status(500).json({ error: 'Error en el servidor' });
+  }
+};
+
+export const playPreview = async (req, res) => {
+  try {
+    const { previewUrl } = req.query;
+
+    if (!previewUrl) {
+      return res.status(400).json({ error: "Se requiere la URL del preview" });
+    }
+
+    // Solo redirige al cliente para que reproduzca el preview
+    return res.redirect(previewUrl);
+  } catch (error) {
+    console.error("Error en playPreview:", error.message);
+    return res.status(500).json({ error: "No se pudo redirigir al preview" });
+  }
+};
