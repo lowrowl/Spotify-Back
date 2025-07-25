@@ -136,7 +136,6 @@ export const playPreview = async (req, res) => {
       return res.status(400).json({ error: "Se requiere la URL del preview" });
     }
 
-    // Solo redirige al cliente para que reproduzca el preview
     return res.redirect(previewUrl);
   } catch (error) {
     console.error("Error en playPreview:", error.message);
