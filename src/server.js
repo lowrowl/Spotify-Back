@@ -1,12 +1,12 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/db');
-const authRoutes = require('./routes/auth');
-const musicRoutes = require('./routes/music');
-const userRoutes = require('./routes/user'); // Asegúrate de que esta línea esté presente
-const { getSpotifyAccessToken } = require('./utils/spotifyUtils');
-
+// server.js
+import 'dotenv/config'; // Forma moderna de cargar dotenv en ES Modules
+import express from 'express';
+import cors from 'cors';
+import connectDB from './config/db.js'; // Importa con .js
+import authRoutes from './routes/auth.js'; // Importa con .js
+import musicRoutes from './routes/music.js'; // Importa con .js
+import userRoutes from './routes/user.js'; // Importa con .js
+import { getSpotifyAccessToken } from './utils/spotifyUtils.js'; // Importa con .js
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,9 +16,9 @@ connectDB();
 
 // Configurar CORS
 app.use(cors({
-  origin: '*', // Permitir todas las solicitudes de cualquier origen
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
-  allowedHeaders: ['Content-Type', 'Authorization'] // Encabezados permitidos
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Renueva el token cada 55 minutos (3300 segundos)
@@ -28,15 +28,14 @@ setInterval(async () => {
 }, 3300 * 1000);
 
 app.use(express.json());
-app.use('/uploads', express.static('uploads')); // Servir archivos estáticos
+app.use('/uploads', express.static('uploads'));
 
 // Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/music', musicRoutes);
-app.use('/api/user', userRoutes); // Asegúrate de que esta línea esté presente
+app.use('/api/user', userRoutes);
 
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-  
+  console.log(`Servidor ejecutándose en el puerto ${PORT}`);
 });
