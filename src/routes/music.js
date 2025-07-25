@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateUser } from '../../middleware_auth.js'; // Adjust path as per your project structure
+import { authenticateUser } from '../../src/middleware/authMiddleware.js'; // Adjust path as per your project structure
 import Spotify from '../utils/Spotify.js'; // Your custom Spotify API utility
 import Playlist from '../models/Playlist.js'; // Your Playlist model
 import Songs from '../models/Songs.js'; // Your Songs model
