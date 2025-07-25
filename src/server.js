@@ -6,14 +6,12 @@ import connectDB from './config/db.js'; // Importa con .js
 import authRoutes from './routes/auth.js'; // Importa con .js
 import musicRoutes from './routes/music.js'; // Importa con .js
 import userRoutes from './routes/user.js'; // Importa con .js
-import { getSpotifyAccessToken } from './utils/spotifyUtils.js'; // Importa con .js
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Conectar a MongoDB
 connectDB();
-getSpotifyAccessToken()
 
 // Configurar CORS
 app.use(cors({
