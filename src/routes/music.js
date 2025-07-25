@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateUser } from '../../authMiddleware.js';
+import { authenticateUser } from '../middleware/authMiddleware.js';
 import Spotify from '../services/Spotify.js';
 import Playlist from '../../Playlist.js';
 import Songs from '../models/Songs.js';
