@@ -7,7 +7,7 @@ let tokenExpirationTime = null; // Variable para almacenar el tiempo de expiraci
 const getSpotifyAccessToken = async () => {
   try {
     const response = await axios.post(
-      'https://accounts.spotify.com/api/token',
+      'https://accounts.spotify.com/api/token', // URL CORREGIDA para obtener el token
       new URLSearchParams({ grant_type: 'client_credentials' }),
       {
         headers: {
