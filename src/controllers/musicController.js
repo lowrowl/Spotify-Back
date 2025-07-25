@@ -58,29 +58,26 @@ export const getSimilarTracks = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // 1. Obtener la canción original
-    const originalTrack = await deezerService.getTrackById(id);
+    const originalTrack = await getTrackByIdDeezer(id);
     if (!originalTrack) {
-      return res.status(404).json({ error: 'Canción no encontrada' });
+      return res.status(404).json({ error: 'Canción no encontrada.' });
     }
 
-    const mainArtist = originalTrack.artists[0];
-    if (!mainArtist) {
+    const artistName = originalTrack.artist?.name;
+    if (!artistName) {
       return res.status(404).json({ error: 'Artista no encontrado en la canción' });
     }
 
-    // 2. Obtener top canciones del artista
-    const similarTracks = await deezerService.getTracksByArtist(mainArtist, 10);
+    const similarTracks = await searchDeezerTracksByArtist(artistName);
 
-    // 3. Filtrar la canción original y limitar a 5
-    const filteredTracks = similarTracks
-      .filter((track) => track.id !== originalTrack.id)
+    const filtered = similarTracks
+      .filter(track => track.id !== originalTrack.id)
       .slice(0, 5);
 
-    return res.status(200).json(filteredTracks);
+    return res.status(200).json(filtered);
   } catch (error) {
-    console.error('Error al obtener canciones similares:', error);
-    res.status(500).json({ error: 'Error al buscar canciones similares' });
+    console.error('Error al obtener canciones similares:', error.message);
+    return res.status(500).json({ error: 'Error al buscar canciones similares' });
   }
 };
 
