@@ -34,8 +34,8 @@ const saveOrGetSongId = async (spotifyTrack) => {
         name: spotifyTrack.name,
         genres: spotifyTrack.genres || [],
         duration: spotifyTrack.duration_ms,
-        image: spotifyTrack.album.images[0]?.url || '',
-        url_cancion: spotifyTrack.external_urls.spotify,
+        image: spotifyTrack.imageUrl || '',
+        url_cancion: spotifyTrack.url,
         idArtist: artistIds,
       });
       await song.save();
@@ -65,6 +65,9 @@ router.get('/search', authenticateUser, async (req, res) => {
     }
 
     if (result.error) {
+      if (result.error.includes('400')) {
+        return res.status(400).json({ error: 'Error de búsqueda: verifica que el artista existe y que el token de Spotify está activo.' });
+      }
       return res.status(500).json({ error: result.error });
     }
 
