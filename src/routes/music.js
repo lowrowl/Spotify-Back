@@ -5,6 +5,7 @@ import Playlist from '../models/Playlist.js';
 import Songs from '../models/Song.js';
 import mongoose from 'mongoose';
 import Artist from '../models/Artist.js'; // Asegúrate de tener este modelo definido
+import axios from 'axios';
 
 const router = express.Router();
 const spotifyClient = new Spotify();
@@ -77,6 +78,35 @@ router.get('/search', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Error searching Spotify:', error);
     res.status(500).json({ error: 'Error al buscar en Spotify' });
+  }
+});
+
+router.get('/preview', authenticateUser, async (req, res) => {
+  const { track, artist } = req.query;
+
+  if (!track || !artist) {
+    return res.status(400).json({ error: 'Debes proporcionar el nombre de la canción y del artista' });
+  }
+
+  try {
+    const response = await axios.get(`https://api.deezer.com/search?q=track:"${track}" artist:"${artist}"`);
+    const results = response.data.data;
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'No se encontró el preview en Deezer' });
+    }
+
+    const previewUrl = results[0].preview;
+    const fullData = results[0];
+
+    if (!previewUrl) {
+      return res.status(404).json({ error: 'Esta canción no tiene preview disponible en Deezer' });
+    }
+
+    res.json({ previewUrl, deezerData: fullData });
+  } catch (error) {
+    console.error('Error obteniendo preview de Deezer:', error);
+    res.status(500).json({ error: 'Error al buscar preview en Deezer' });
   }
 });
 
