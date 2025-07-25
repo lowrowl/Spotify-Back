@@ -1,323 +1,215 @@
-const express = require('express');
-const axios = require('axios');
-const authMiddleware = require('../middleware/authMiddleware');
-const { getValidSpotifyAccessToken } = require('../utils/spotifyUtils'); // Importa la función para obtener un token válido
+import express from 'express';
+import { authenticateUser } from '../../middleware_auth.js'; // Adjust path as per your project structure
+import Spotify from '../utils/Spotify.js'; // Your custom Spotify API utility
+import Playlist from '../models/Playlist.js'; // Your Playlist model
+import Songs from '../models/Songs.js'; // Your Songs model
+import Artist from '../models/Artist.js'; // Your Artist model
+import mongoose from 'mongoose'; // Import mongoose for ObjectId
 
 const router = express.Router();
+const spotifyClient = new Spotify();
 
-// Array en memoria para almacenar las playlists (aunque se usa MongoDB, esto puede ser un remanente)
-const playlists = []; //
+// Helper function to save a song to the Songs collection if it doesn't exist
+const saveOrGetSongId = async (spotifyTrack) => {
+  try {
+    let song = await Songs.findOne({ name: spotifyTrack.name, 'idArtist.name': spotifyTrack.artists[0].name }); // Find by name and first artist
 
-// Ruta para buscar canciones y artistas
-router.get('/search', authMiddleware, async (req, res) => {
-  const { query } = req.query; //
+    if (!song) {
+      // If song not found, create new song entry
+      const artistNames = spotifyTrack.artists;
+      const artistIds = [];
+
+      for (const artistName of artistNames) {
+        let artist = await Artist.findOne({ name: artistName });
+        if (!artist) {
+          // If artist doesn't exist, create a new one (with minimal data for now)
+          artist = new Artist({
+            name: artistName,
+            genres: [], // Spotify API search might not give genres directly here, can be updated later
+            image: null,
+            popularity: 0,
+          });
+          await artist.save();
+        }
+        artistIds.push(artist._id);
+      }
+
+      song = new Songs({
+        name: spotifyTrack.name,
+        genres: spotifyTrack.genres || [],
+        duration: spotifyTrack.duration_ms, // Spotify returns duration in ms
+        image: spotifyTrack.imageUrl,
+        url_cancion: spotifyTrack.preview_url || null, // Assuming preview_url is available
+        idArtist: artistIds,
+      });
+      await song.save();
+    }
+    return song._id;
+  } catch (error) {
+    console.error('Error saving or getting song ID:', error);
+    throw new Error('Failed to save or retrieve song ID');
+  }
+};
+
+
+// Route for searching songs and artists
+router.get('/search', authenticateUser, async (req, res) => {
+  const { query, type = 'track,artist', limit = 50, offset = 0 } = req.query;
 
   if (!query) {
-    return res.status(400).json({ error: 'El término de búsqueda es obligatorio' }); //
+    return res.status(400).json({ error: 'El término de búsqueda es obligatorio' });
   }
 
   try {
-    // Obtén un token válido
-    const token = await getValidSpotifyAccessToken(); //
-
-    // Llama a la API de Spotify
-    const response = await axios.get('https://api.spotify.com/v1/search', { // URL CORREGIDA para búsqueda
-      headers: {
-        Authorization: `Bearer ${token}`, //
-      },
-      params: {
-        q: query, //
-        type: 'track,artist', // Incluye tanto canciones como artistas
-        limit: 50, //
-      },
+    const searchResults = await spotifyClient.getTracks({
+      by: 'name', // Using 'name' for general search across tracks/artists
+      param: query,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
     });
 
-    // Filtra y estructura los datos relevantes
-    const tracks = response.data.tracks?.items.map((track) => ({ //
-      id: track.id, //
-      name: track.name, //
-      artists: track.artists.map((artist) => artist.name).join(', '), //
-      album: track.album.name, //
-      releaseDate: track.album.release_date, //
-      durationMs: track.duration_ms, //
-      previewUrl: track.preview_url, //
-      imageUrl: track.album.images[0]?.url, //
-    })) || [];
-
-    const artists = response.data.artists?.items.map((artist) => ({ //
-      id: artist.id, //
-      name: artist.name, //
-      genres: artist.genres, //
-      followers: artist.followers.total, //
-      imageUrl: artist.images[0]?.url, //
-    })) || [];
-
-    // Devuelve primero los artistas y luego las canciones
-    res.json({ artists, tracks }); //
-  } catch (error) {
-    console.error('Error al llamar a la API de música:', error.response?.data || error.message); //
-    res.status(500).json({ error: 'Error al obtener datos de música', details: error.response?.data || error.message }); //
-  }
-});
-
-// Ruta para obtener detalles de una canción
-router.get('/track/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params; //
-
-  if (!id) {
-    return res.status(400).json({ error: 'El ID de la canción es obligatorio' }); //
-  }
-
-  try {
-    // Obtén un token válido
-    const token = await getValidSpotifyAccessToken(); //
-
-    // Llama a la API de Spotify para obtener los detalles de la canción
-    const response = await axios.get(`https://api.spotify.com/v1/tracks/${id}`, { // URL CORREGIDA para detalles de canción
-      headers: {
-        Authorization: `Bearer ${token}`, //
-      },
-    });
-
-    // Estructura los datos relevantes
-    const track = {
-      id: response.data.id, //
-      name: response.data.name, //
-      artists: response.data.artists.map((artist) => artist.name), //
-      album: {
-        name: response.data.album.name, //
-        release_date: response.data.album.release_date, //
-        images: response.data.album.images, //
-      },
-      duration_ms: response.data.duration_ms, //
-      preview_url: response.data.preview_url, //
-    };
-
-    res.json(track); // Devuelve los datos al frontend
-  } catch (error) {
-    console.error('Error al obtener los detalles de la canción:', error.response?.data || error.message); //
-    res.status(500).json({ error: 'Error al obtener los detalles de la canción', details: error.response?.data || error.message }); //
-  }
-});
-
-// Ruta para obtener álbumes y sencillos populares (usando 'new-releases' como ejemplo de populares)
-router.get('/popular', async (req, res) => {
-  try {
-    const token = await getValidSpotifyAccessToken(); //
-    console.log('Token de Spotify:', token); //
-
-    const response = await axios.get('https://api.spotify.com/v1/browse/new-releases', { // URL CORREGIDA para nuevos lanzamientos (comúnmente usado para 'popular')
-      headers: {
-        Authorization: `Bearer ${token}`, //
-      },
-      params: {
-        limit: 10, //
-        offset: 0, //
-      },
-    });
-
-    console.log('Respuesta de Spotify:', response.data); //
-
-    const albums = response.data.albums.items.map((album) => ({ //
-      id: album.id, //
-      name: album.name, //
-      artists: album.artists.map((artist) => artist.name).join(', '), //
-      releaseDate: album.release_date, //
-      imageUrl: album.images[0]?.url, //
-    }));
-
-    res.json(albums); //
-  } catch (error) {
-    console.error('Error al obtener álbumes populares:', error.response?.data || error.message); //
-    res.status(500).json({
-      error: 'Error al obtener álbumes populares', //
-      details: error.response?.data || error.message, //
-    });
-  }
-});
-
-// Ruta para obtener la vista previa de una canción
-router.get('/preview', async (req, res) => {
-  const { url } = req.query; //
-
-  if (!url) {
-    return res.status(400).json({ error: 'La URL de la vista previa es obligatoria' }); //
-  }
-
-  try {
-    const response = await axios.get(url, { responseType: 'stream' }); //
-    res.set('Content-Type', response.headers['content-type']); //
-    response.data.pipe(res); //
-  } catch (error) {
-    console.error('Error al obtener la vista previa:', error.message); //
-    res.status(500).json({ error: 'Error al obtener la vista previa' }); //
-  }
-});
-
-// Ruta para crear una playlist
-const Playlist = require('../models/Playlist'); // Importa el modelo de Playlist
-
-router.post('/playlists', authMiddleware, async (req, res) => {
-  const { name, songs } = req.body; //
-  const userId = req.user.id; //
-
-  if (!name) {
-    return res.status(400).json({ error: 'El nombre de la playlist es obligatorio' }); //
-  }
-
-  try {
-    // Verifica si hay canciones duplicadas en el array `songs`
-    const songIds = songs.map((song) => song.id); //
-    const hasDuplicates = songIds.some((id, index) => songIds.indexOf(id) !== index); //
-
-    if (hasDuplicates) {
-      return res.status(400).json({ error: 'La playlist contiene canciones duplicadas' }); //
+    if (searchResults.error) {
+        return res.status(500).json({ error: searchResults.error });
     }
 
-    const newPlaylist = new Playlist({ //
-      name, //
-      songs: songs || [], //
-      createdBy: userId, //
+    // The spotifyClient.getTracks should ideally return separated tracks and artists,
+    // but based on its current implementation (from provided Spotify.js), it seems
+    // to return tracks directly when 'by' is 'name'.
+    // If you need artists as well, you might need to adjust Spotify.js or make a separate call.
+
+    // For now, assuming searchResults contains tracks and artists based on the original request
+    const tracks = searchResults.tracks || searchResults; // Adjust based on actual spotifyClient.getTracks return
+    const artists = searchResults.artists || []; // Assuming artists are also returned or can be extracted
+
+    res.json({ tracks, artists });
+  } catch (error) {
+    console.error('Error searching Spotify:', error.message);
+    res.status(500).json({ error: 'Error al buscar canciones o artistas' });
+  }
+});
+
+// Route to get playlists for a user
+router.get('/playlists', authenticateUser, async (req, res) => {
+  try {
+    // Populate the idSong array with actual song documents
+    const playlists = await Playlist.find({ createdBy: req.user.id }).populate('idSong');
+    res.json(playlists);
+  } catch (error) {
+    console.error('Error getting playlists:', error);
+    res.status(500).json({ error: 'Error al obtener las playlists' });
+  }
+});
+
+// Route to create a new playlist
+router.post('/playlists', authenticateUser, async (req, res) => {
+  const { name, image, songs = [] } = req.body; // 'songs' should be an array of Spotify track objects
+
+  if (!name || !image) {
+    return res.status(400).json({ error: 'El nombre y la imagen de la playlist son obligatorios' });
+  }
+
+  try {
+    const songIds = [];
+    for (const spotifyTrack of songs) {
+      const songId = await saveOrGetSongId(spotifyTrack);
+      songIds.push(songId);
+    }
+
+    const newPlaylist = new Playlist({
+      name,
+      image,
+      idSong: songIds,
+      createdBy: req.user.id,
     });
 
-    const savedPlaylist = await newPlaylist.save(); //
-    res.status(201).json(savedPlaylist); //
+    const savedPlaylist = await newPlaylist.save();
+    // Populate the songs before sending the response
+    const populatedPlaylist = await Playlist.findById(savedPlaylist._id).populate('idSong');
+    res.status(201).json(populatedPlaylist);
   } catch (error) {
-    console.error('Error al crear la playlist:', error); //
-    res.status(500).json({ error: 'Error al crear la playlist' }); //
+    console.error('Error creating playlist:', error);
+    res.status(500).json({ error: 'Error al crear la playlist' });
   }
 });
 
-// Ruta para obtener todas las playlists del usuario autenticado
-router.get('/playlists', authMiddleware, async (req, res) => {
-  const userId = req.user.id; // ID del usuario autenticado
+// Route to add a song to an existing playlist
+router.post('/playlists/:playlistId/songs', authenticateUser, async (req, res) => {
+  const { playlistId } = req.params;
+  const { song: spotifyTrack } = req.body; // 'song' should be a Spotify track object
 
-  try {
-    const playlists = await Playlist.find({ createdBy: userId }); // Filtra por usuario
-    res.json(playlists); //
-  } catch (error) {
-    console.error('Error al obtener las playlists:', error); //
-    res.status(500).json({ error: 'Error al obtener las playlists' }); //
+  if (!spotifyTrack || !spotifyTrack.id || !spotifyTrack.name || !spotifyTrack.artists) {
+    return res.status(400).json({ error: 'Los datos de la canción son obligatorios (id, name, artists).' });
   }
-});
-
-// Ruta para obtener una playlist específica por ID
-router.get('/playlists/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params; //
 
   try {
-    const playlist = await Playlist.findById(id); //
+    const playlist = await Playlist.findById(playlistId);
 
     if (!playlist) {
-      return res.status(404).json({ error: 'Playlist no encontrada' }); //
+      return res.status(404).json({ error: 'Playlist no encontrada' });
     }
 
-    res.json(playlist); //
+    // Save or get the song's _id from your Songs collection
+    const songDbId = await saveOrGetSongId(spotifyTrack);
+
+    // Check if the song (by its _id) is already in the playlist to avoid duplicates
+    const isSongAlreadyInPlaylist = playlist.idSong.some(sId => sId.equals(songDbId));
+
+    if (isSongAlreadyInPlaylist) {
+      return res.status(409).json({ error: 'La canción ya existe en esta playlist.' });
+    }
+
+    playlist.idSong.push(songDbId);
+    const updatedPlaylist = await playlist.save();
+    // Populate the songs before sending the response
+    const populatedPlaylist = await Playlist.findById(updatedPlaylist._id).populate('idSong');
+    res.json(populatedPlaylist);
   } catch (error) {
-    console.error('Error al obtener la playlist:', error); //
-    res.status(500).json({ error: 'Error al obtener la playlist' }); //
+    console.error('Error adding song to playlist:', error);
+    res.status(500).json({ error: 'Error al agregar la canción a la playlist' });
   }
 });
 
-// Ruta para actualizar una playlist
-router.put('/playlists/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params; //
-  const { songs } = req.body; //
+// Route to delete a playlist
+router.delete('/playlists/:id', authenticateUser, async (req, res) => {
+  const { id } = req.params;
 
   try {
-    const updatedPlaylist = await Playlist.findByIdAndUpdate( //
-      id,
-      { $set: { songs } }, //
-      { new: true } //
-    );
-
-    if (!updatedPlaylist) {
-      return res.status(404).json({ error: 'Playlist no encontrada' }); //
-    }
-
-    res.json(updatedPlaylist); //
-  } catch (error) {
-    console.error('Error al actualizar la playlist:', error); //
-    res.status(500).json({ error: 'Error al actualizar la playlist' }); //
-  }
-});
-
-// ********** NOTA: Había una ruta POST duplicada para agregar canciones. He consolidado la lógica. **********
-// He eliminado una de las rutas POST /playlists/:playlistId/songs duplicadas.
-// La ruta POST debería ser solo para agregar, y DELETE para eliminar.
-
-// Ruta para agregar una canción a una playlist
-router.post('/playlists/:playlistId/songs', authMiddleware, async (req, res) => {
-  const { playlistId } = req.params; //
-  const song = req.body; //
-
-  console.log('ID de la playlist:', playlistId); // Depuración
-  console.log('Canción recibida:', song); // Depuración
-
-  try {
-    const playlist = await Playlist.findById(playlistId); //
+    const playlist = await Playlist.findByIdAndDelete(id);
 
     if (!playlist) {
-      console.error('Playlist no encontrada con ID:', playlistId); // Depuración
-      return res.status(404).json({ error: 'Playlist no encontrada' }); //
+      return res.status(404).json({ error: 'Playlist no encontrada' });
     }
 
-    // Verifica si la canción tiene una propiedad `imageUrl`
-    const completeSong = {
-      ...song, //
-      imageUrl: song.imageUrl || 'assets/default-song.png', // Agrega un valor por defecto si no existe
-    };
-
-    playlist.songs.push(completeSong); //
-    await playlist.save(); //
-
-    console.log('Canción agregada a la playlist:', playlist); // Depuración
-    res.json(playlist); //
+    res.json({ message: 'Playlist eliminada correctamente' });
   } catch (error) {
-    console.error('Error al agregar la canción a la playlist:', error); // Depuración
-    res.status(500).json({ error: 'Error al agregar la canción a la playlist' }); //
+    console.error('Error deleting playlist:', error);
+    res.status(500).json({ error: 'Error al eliminar la playlist' });
   }
 });
 
-
-router.delete('/playlists/:id', async (req, res) => {
-  const { id } = req.params; //
-  console.log('ID recibido para eliminar la playlist:', id); // Depuración
+// Route to delete a song from a playlist
+router.delete('/playlists/:playlistId/songs/:songId', authenticateUser, async (req, res) => {
+  const { playlistId, songId } = req.params;
 
   try {
-    const playlist = await Playlist.findByIdAndDelete(id); //
+    const playlist = await Playlist.findById(playlistId);
 
     if (!playlist) {
-      console.error('Playlist no encontrada con ID:', id); // Depuración
-      return res.status(404).json({ error: 'Playlist no encontrada' }); //
+      return res.status(404).json({ error: 'Playlist no encontrada' });
     }
 
-    res.json({ message: 'Playlist eliminada correctamente' }); //
+    // Filter out the song based on its _id
+    // Ensure songId is a valid ObjectId before comparison
+    playlist.idSong = playlist.idSong.filter((sId) => !sId.equals(new mongoose.Types.ObjectId(songId)));
+
+    const updatedPlaylist = await playlist.save();
+    // Populate the songs before sending the response
+    const populatedPlaylist = await Playlist.findById(updatedPlaylist._id).populate('idSong');
+    res.json(populatedPlaylist);
   } catch (error) {
-    console.error('Error al eliminar la playlist:', error); //
-    res.status(500).json({ error: 'Error al eliminar la playlist' }); //
+    console.error('Error deleting song from playlist:', error);
+    res.status(500).json({ error: 'Error al eliminar la canción de la playlist' });
   }
 });
 
-router.delete('/playlists/:playlistId/songs/:songId', authMiddleware, async (req, res) => {
-  const { playlistId, songId } = req.params; //
-
-  try {
-    const playlist = await Playlist.findById(playlistId); //
-
-    if (!playlist) {
-      return res.status(404).json({ error: 'Playlist no encontrada' }); //
-    }
-
-    // Filtra las canciones para eliminar la que coincide con el ID
-    playlist.songs = playlist.songs.filter((song) => song.id !== songId); //
-    const updatedPlaylist = await playlist.save(); //
-
-    res.json(updatedPlaylist); //
-  } catch (error) {
-    console.error('Error al eliminar la canción de la playlist:', error); //
-    res.status(500).json({ error: 'Error al eliminar la canción de la playlist' }); //
-  }
-});
-
-module.exports = router;
+export default router;
