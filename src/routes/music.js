@@ -1,9 +1,8 @@
 import express from 'express';
-import { authenticateUser } from '../middleware/authMiddleware.js';
+import { authenticateUser } from '..middleware/authMiddleware.js';
 import Spotify from '../services/Spotify.js';
-import Playlist from '../../Playlist.js';
+import Playlist from '../models/Playlist.js';
 import Songs from '../models/Songs.js';
-import Artist from '../models/Artist.js';
 import mongoose from 'mongoose';
 
 const router = express.Router();
