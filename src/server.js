@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 5000;
 
 // Conectar a MongoDB
 connectDB();
+getSpotifyAccessToken()
 
 // Configurar CORS
 app.use(cors({
