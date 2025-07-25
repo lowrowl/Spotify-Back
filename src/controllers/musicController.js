@@ -128,15 +128,17 @@ export const getRecommendations = async (req, res) => {
   }
 };
 
+
 export const playPreview = async (req, res) => {
   try {
-    const { previewUrl } = req.query;
+    const { id } = req.params;
+    const track = await getTrackByIdDeezer(id);
 
-    if (!previewUrl) {
-      return res.status(400).json({ error: "Se requiere la URL del preview" });
+    if (!track || !track.preview) {
+      return res.status(404).json({ error: 'Canción no encontrada.' });
     }
 
-    return res.redirect(previewUrl);
+    return res.redirect(track.preview);
   } catch (error) {
     console.error("Error en playPreview:", error.message);
     return res.status(500).json({ error: "No se pudo redirigir al preview" });
