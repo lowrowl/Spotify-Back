@@ -6,7 +6,7 @@ const SECRET_KEY = process.env.JWT_SECRET || 'secretkey123';
 
 // Registro
 export const register = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, lastname, email, password, country, role } = req.body;
 
   try {
     const userExists = await User.findOne({ email });
@@ -16,9 +16,11 @@ export const register = async (req, res) => {
 
     const newUser = new User({
       name,
+      lastname,
       email,
       password: hashedPassword,
-      role: role || 'user',
+      country,
+      role: role || 'usuario',  // Asegura que coincida con el enum del schema
     });
 
     await newUser.save();
