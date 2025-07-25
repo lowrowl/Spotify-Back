@@ -30,77 +30,32 @@ class Spotify {
     }
 
     try {
-      let theTracks = [];
-
       if (byFormatted === "name") {
         const arrayTracks = result["tracks"]?.items;
         if (arrayTracks && arrayTracks.length > 0) {
-          theTracks = await this.#getTracksParsed({ prop: arrayTracks });
+          return await this.#getTracksParsed({ prop: arrayTracks });
         }
+        return [];
       }
 
-      else if (byFormatted === "artist") {
-        const artistItem = result["artists"]?.items?.[0];
-        if (!artistItem || !artistItem.id) {
-          return { error: "Artista no encontrado en Spotify." };
-        }
+      if (byFormatted === "artist") {
+        const artists = result["artists"]?.items || [];
 
-        const idArtist = artistItem.id;
-
-        // Obtener álbumes del artista
-        const objectAlbums = await apiFetch({
-          type: "artist",
-          option: "albums",
-          body: { id: idArtist },
-        });
-
-        const albums = objectAlbums?.items || [];
-
-        // Obtener canciones de cada álbum
-        const tracksAlbumsPromises = albums.map(async (album) => {
-          const result = await apiFetch({
-            type: "albums",
-            body: { id: album.id },
-          });
-
-          const tracks = result?.tracks?.items || [];
-
-          return await this.#getTracksParsed({
-            prop: tracks,
-            imageUrl: result?.images?.[0]?.url,
-            genres: result?.genres || [],
-          });
-        });
-
-        const tracksAlbums = (await Promise.all(tracksAlbumsPromises)).flat();
-
-        // Obtener top tracks
-        const topTracksResult = await apiFetch({
-          type: "artist",
-          option: "top-tracks",
-          body: { id: idArtist, country: "US" },
-        });
-
-        const topTracks = await this.#getTracksParsed({
-          prop: topTracksResult?.tracks || [],
-        });
-
-        // Combinar todos sin duplicados
-        const combinedTracks = {};
-        [...tracksAlbums, ...topTracks].forEach((track) => {
-          if (track && track.id) {
-            combinedTracks[track.id] = track;
-          }
-        });
-
-        theTracks = Object.values(combinedTracks);
+        return artists.map((artist) => ({
+          id: artist.id,
+          name: artist.name,
+          genres: artist.genres || [],
+          imageUrl: artist.images?.[0]?.url || null,
+          popularity: artist.popularity,
+          url: artist.external_urls?.spotify || ""
+        }));
       }
 
-      else if (byFormatted === "id") {
-        theTracks = await this.#getTracksParsed({ prop: [result] });
+      if (byFormatted === "id") {
+        return await this.#getTracksParsed({ prop: [result] });
       }
 
-      return theTracks;
+      return [];
     } catch (error) {
       console.error(`Error al procesar tracks en Spotify.js: ${error.message}`);
       return { error: `Error al procesar tracks de Spotify: ${error.message}` };
