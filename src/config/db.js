@@ -1,5 +1,6 @@
-const mongoose = require('mongoose');
-require('dotenv').config();
+import mongoose from 'mongoose';
+// No es necesario 'import 'dotenv/config';' aquí si ya lo estás cargando en server.js
+// y este archivo solo se conecta a la DB cuando es llamado por server.js.
 
 const connectDB = async () => {
   try {
@@ -14,4 +15,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = connectDB;
+export default connectDB;

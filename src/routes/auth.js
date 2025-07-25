@@ -1,8 +1,8 @@
-// filepath: c:\Users\luis3\OneDrive\Desktop\Spotify-Angular\backend\src\routes\auth.js
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+// Asumiendo que User.js está en src/models/User.js y exporta por defecto
+import User from '../models/User.js'; // Ajusta la ruta a tu modelo User
 
 const router = express.Router();
 
@@ -14,7 +14,7 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Todos los campos son obligatorios' });
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({ error: 'El email no es válido' });
   }
@@ -60,12 +60,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Nombre de usuario o contraseña incorrectos' });
     }
 
-    const token = jwt.sign({ id: user._id, username }, process.env.JWT_SECRET || 'secreto', { expiresIn: '1h' });
+    const token = jwt.sign({ id: user._id, email: user.email, username: user.username }, process.env.JWT_SECRET || 'secreto', { expiresIn: '1h' });
 
-    res.json({ token, user: { id: user._id, username }, mensaje: 'Inicio de sesión exitoso' });
+    res.status(200).json({ token, user: { id: user._id, email: user.email, username: user.username }, mensaje: 'Inicio de sesión exitoso' });
   } catch (error) {
     res.status(500).json({ error: 'Error al iniciar sesión: ' + error.message });
   }
 });
 
-module.exports = router;
+export default router; // Exportación por defecto

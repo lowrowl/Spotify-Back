@@ -1,10 +1,11 @@
-const axios = require('axios');
+import axios from 'axios';
+import { Buffer } from 'buffer'; // Node.js 'buffer' module para Buffer.from
 
 let spotifyAccessToken = null; // Variable para almacenar el token en memoria
 let tokenExpirationTime = null; // Variable para almacenar el tiempo de expiración del token
 
 // Función para obtener un nuevo token de Spotify
-const getSpotifyAccessToken = async () => {
+export const getSpotifyAccessToken = async () => {
   try {
     const response = await axios.post(
       'https://accounts.spotify.com/api/token', // URL CORREGIDA para obtener el token
@@ -30,11 +31,9 @@ const getSpotifyAccessToken = async () => {
 };
 
 // Función para obtener un token válido
-const getValidSpotifyAccessToken = async () => {
+export const getValidSpotifyAccessToken = async () => {
   if (!spotifyAccessToken || Date.now() >= tokenExpirationTime) {
     await getSpotifyAccessToken(); // Obtén un nuevo token si no existe o ha expirado
   }
   return spotifyAccessToken;
 };
-
-module.exports = { getValidSpotifyAccessToken };

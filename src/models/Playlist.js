@@ -1,19 +1,11 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const PlaylistSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  songs: [
-    {
-      id: { type: String, unique: true },
-      name: String,
-      artists: [String], // Cambia a un arreglo de cadenas
-      album: String,
-      releaseDate: String,
-      imageUrl: String,
-    },
-  ],
+  // ... (tu esquema actual de songs o idSong)
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model('Playlist', PlaylistSchema);
+const Playlist = mongoose.model('Playlist', PlaylistSchema);
+export default Playlist; // Exportación por defecto

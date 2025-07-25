@@ -1,7 +1,9 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
+// No necesitas 'require' aquí si jwt es un módulo ES o un paquete npm
+// Si tienes algún problema con jwt, puede que necesites import * as jwt from 'jsonwebtoken';
 
-const authMiddleware = (req, res, next) => {
-  const token = req.header('Authorization').replace('Bearer ', '');
+const authenticateUser = (req, res, next) => {
+  const token = req.header('Authorization')?.replace('Bearer ', ''); // Usa optional chaining por seguridad
   if (!token) {
     return res.status(401).json({ error: 'Acceso denegado. No se proporcionó un token.' });
   }
@@ -15,4 +17,4 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-module.exports = authMiddleware;
+export { authenticateUser }; // Exportación nombrada

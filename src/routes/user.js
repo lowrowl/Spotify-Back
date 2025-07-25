@@ -1,13 +1,15 @@
-const express = require('express');
+import express from 'express';
+// Asumiendo que User.js está en src/models/User.js y exporta por defecto
+import User from '../models/User.js'; // Ajusta la ruta a tu modelo User
+
 const router = express.Router();
-const User = require('../models/User');
 
 // Guardar canciones recientes
 router.post('/viewed-tracks', async (req, res) => {
   const { username, track } = req.body;
 
   try {
-    const user = await User.findOne({ username }); // Busca al usuario por email
+    const user = await User.findOne({ username }); // Busca al usuario por username
 
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -33,7 +35,7 @@ router.get('/viewed-tracks/:username', async (req, res) => {
   const { username } = req.params;
 
   try {
-    const user = await User.findOne({ username }); // Busca al usuario por email
+    const user = await User.findOne({ username }); // Busca al usuario por username
 
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -45,4 +47,4 @@ router.get('/viewed-tracks/:username', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router; // Exportación por defecto
