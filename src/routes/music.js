@@ -4,13 +4,14 @@ import Spotify from '../services/Spotify.js';
 import Playlist from '../models/Playlist.js';
 import Songs from '../models/Song.js';
 import mongoose from 'mongoose';
+import Artist from '../models/Artist.js'; // Asegúrate de tener este modelo definido
 
 const router = express.Router();
 const spotifyClient = new Spotify();
 
 const saveOrGetSongId = async (spotifyTrack) => {
   try {
-    let song = await Songs.findOne({ name: spotifyTrack.name, 'idArtist.name': spotifyTrack.artists[0].name });
+    let song = await Songs.findOne({ name: spotifyTrack.name, 'idArtist.name': spotifyTrack.artists[0] });
 
     if (!song) {
       const artistNames = spotifyTrack.artists;
@@ -40,6 +41,7 @@ const saveOrGetSongId = async (spotifyTrack) => {
       });
       await song.save();
     }
+
     return song._id;
   } catch (error) {
     console.error('Error in saveOrGetSongId:', error);
