@@ -1,8 +1,14 @@
+import mongoose from 'mongoose';
+
 const songSchema = new mongoose.Schema({
   title: String,
   artist: String,
   album: String,
-  cover: String,        // URL de imagen
-  preview: String,      // URL del fragmento de audio
-  deezerId: Number,     // ID original de Deezer
+  cover: String,
+  preview: String,
+  deezerId: Number,
 }, { timestamps: true });
+
+const Song = mongoose.model('Song', songSchema);
+
+export default Song;
