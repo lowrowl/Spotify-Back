@@ -2,7 +2,7 @@ import express from 'express';
 import {
   searchTracks,
   getTrackById,
-  getSimilarTracks, // ✅ Asegúrate de incluir esta función
+  getSimilarTracks,
   getHomeData,
   getRecommendations,
   playPreview,
@@ -12,21 +12,24 @@ import { authenticateUser } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+// ✅ Las rutas más específicas deben ir primero
+
 // Buscar canciones en Deezer
 router.get('/search', authenticateUser, searchTracks);
 
-// Obtener preview de canción por ID
-router.get('/preview/:id', authenticateUser, playPreview);
-
-// Obtener canción específica
-router.get('/:id', authenticateUser, getTrackById);
-
-// Obtener recomendación (siguiente canción similar)
-router.get('/recommendation/:id', authenticateUser, getRecommendations);
-
-router.get('/track/:id/similar', getSimilarTracks);
-
+// Obtener datos para pantalla de inicio
 router.get('/home', authenticateUser, getHomeData);
 
+// Reproducir preview de canción
+router.get('/preview/:id', authenticateUser, playPreview);
+
+// Obtener recomendaciones tipo radio
+router.get('/recommendation/:id', authenticateUser, getRecommendations);
+
+// Obtener canciones similares por artista
+router.get('/track/:id/similar', authenticateUser, getSimilarTracks);
+
+// Obtener canción específica por ID
+router.get('/:id', authenticateUser, getTrackById); // Esta va de última
 
 export default router;
