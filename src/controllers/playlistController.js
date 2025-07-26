@@ -103,13 +103,13 @@ export const addSongToPlaylist = async (req, res) => {
     const playlist = await Playlist.findById(playlistId);
     if (!playlist) return res.status(404).json({ error: 'Playlist no encontrada' });
 
+    // Evitar duplicados
     if (!playlist.idSong.includes(songId)) {
-      playlist.idSong.push(new mongoose.Types.ObjectId(songId));
+      playlist.idSong.push(songId); // ← Solo push directo del número
       await playlist.save();
     }
 
-    const populated = await Playlist.findById(playlistId).populate('idSong');
-    res.json(populated);
+    res.json(playlist);
   } catch (error) {
     console.error('Error al añadir canción:', error);
     res.status(500).json({ error: 'Error al añadir canción a la playlist' });
