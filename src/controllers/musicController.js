@@ -1,9 +1,7 @@
 import {
-  searchTracksDeezer,
   getTrackByIdDeezer,
-  getPopularTracksDeezer
+  searchDeezerTracksByArtist // ← ESTO FALTABA
 } from '../services/deezerServices.js';
-
 /**
  * Buscar canciones por nombre, artista, álbum, etc.
  */
