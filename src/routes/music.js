@@ -11,6 +11,9 @@ import {
 import { authenticateUser } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+// Cambio mínimo para forzar redeploy
+console.log('🚀 Cambio forzado para Railway');
+
 
 // ✅ Las rutas más específicas deben ir primero
 
