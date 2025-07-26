@@ -21,12 +21,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Renueva el token cada 55 minutos (3300 segundos)
-setInterval(async () => {
-  console.log('Renovando el token de Spotify...');
-  await getSpotifyAccessToken();
-}, 3300 * 1000);
-
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
