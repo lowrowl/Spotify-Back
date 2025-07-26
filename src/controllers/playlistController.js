@@ -116,16 +116,26 @@ export const addSongToPlaylist = async (req, res) => {
   }
 };
 
-// Eliminar una canción de una playlist
+// Eliminar una canción de una playlist usando el ID de Deezer
 export const removeSongFromPlaylist = async (req, res) => {
-  const { playlistId, songId } = req.params;
+  const { playlistId, songId } = req.params; // songId ahora es el deezerId
 
   try {
-    const playlist = await Playlist.findById(playlistId);
-    if (!playlist) return res.status(404).json({ error: 'Playlist no encontrada' });
+    // Buscar la canción en la colección Song por su id de Deezer
+    const song = await Song.findOne({ deezerId: parseInt(songId) });
 
+    if (!song) {
+      return res.status(404).json({ error: 'Canción no encontrada en base de datos' });
+    }
+
+    const playlist = await Playlist.findById(playlistId);
+    if (!playlist) {
+      return res.status(404).json({ error: 'Playlist no encontrada' });
+    }
+
+    // Eliminar la referencia a la canción por su ObjectId en la playlist
     playlist.idSong = playlist.idSong.filter(
-      (sId) => !sId.equals(new mongoose.Types.ObjectId(songId))
+      (sId) => !sId.equals(song._id)
     );
 
     const updated = await playlist.save();
@@ -137,3 +147,4 @@ export const removeSongFromPlaylist = async (req, res) => {
     res.status(500).json({ error: 'Error al eliminar la canción' });
   }
 };
+
