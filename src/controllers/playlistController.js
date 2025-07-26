@@ -151,26 +151,17 @@ export const addSongToPlaylist = async (req, res) => {
 
 // Eliminar una canción de una playlist
 export const removeSongFromPlaylist = async (req, res) => {
-  const { playlistId, songId } = req.params; // songId = deezerId
+  const { playlistId, songId } = req.params;
 
   try {
-    // Buscar la canción por su deezerId
-    const song = await Song.findOne({ deezerId: Number(songId) });
-    if (!song) return res.status(404).json({ error: 'Canción no encontrada en base de datos' });
-
-    // Buscar la playlist
     const playlist = await Playlist.findById(playlistId);
     if (!playlist) return res.status(404).json({ error: 'Playlist no encontrada' });
 
-    // Filtrar la canción por su _id real
-    playlist.idSong = playlist.idSong.filter(
-      (sId) => !sId.equals(song._id)
-    );
+    // Elimina el deezerId directamente
+    playlist.idSong = playlist.idSong.filter(id => id !== Number(songId));
 
-    const updated = await playlist.save();
-    const populated = await Playlist.findById(updated._id).populate('idSong');
-
-    res.json(populated);
+    await playlist.save();
+    res.json({ message: 'Canción eliminada de la playlist', playlist });
   } catch (error) {
     console.error('Error al eliminar canción:', error);
     res.status(500).json({ error: 'Error al eliminar la canción' });
