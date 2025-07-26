@@ -22,15 +22,22 @@ export const createPlaylist = async (req, res) => {
 };
 
 // Obtener todas las playlists del usuario
+// Obtener todas las playlists del usuario con detalles visuales
 export const getMyPlaylists = async (req, res) => {
   try {
-    const playlists = await Playlist.find({ createdBy: req.user.id }).populate('idSong');
+    const playlists = await Playlist.find({ createdBy: req.user.id })
+      .populate({
+        path: 'idSong',
+        select: 'title artist album cover preview deezerId'  // Campos visuales
+      });
+
     res.json(playlists);
   } catch (error) {
     console.error('Error al obtener playlists:', error);
     res.status(500).json({ error: 'Error al obtener las playlists' });
   }
 };
+
 
 // Obtener una playlist por ID
 export const getPlaylistById = async (req, res) => {
@@ -94,27 +101,53 @@ export const deletePlaylist = async (req, res) => {
   }
 };
 
-// Añadir una canción a la playlist
+import { getTrackByIdDeezer } from '../services/deezerServices.js';
+
+// Añadir una canción a la playlist usando deezerId
 export const addSongToPlaylist = async (req, res) => {
   const { playlistId } = req.params;
-  const { songId } = req.body;
+  const { songId } = req.body; // songId = deezerId
 
   try {
     const playlist = await Playlist.findById(playlistId);
     if (!playlist) return res.status(404).json({ error: 'Playlist no encontrada' });
 
-    // Evitar duplicados
-    if (!playlist.idSong.includes(songId)) {
-      playlist.idSong.push(songId); // ← Solo push directo del número
+    // Verificar si ya está en la base de datos
+    let song = await Song.findOne({ deezerId: songId });
+
+    // Si no está, obtener desde Deezer y guardar
+    if (!song) {
+      const trackData = await getTrackByIdDeezer(songId);
+      if (!trackData) {
+        return res.status(404).json({ error: 'Canción no encontrada en Deezer' });
+      }
+
+      song = new Song({
+        title: trackData.title,
+        artist: trackData.artist.name,
+        album: trackData.album.title,
+        preview: trackData.preview,
+        cover: trackData.album.cover_medium,
+        deezerId: trackData.id,
+      });
+
+      await song.save();
+    }
+
+    // Verificar duplicado
+    if (!playlist.idSong.includes(song._id)) {
+      playlist.idSong.push(song._id);
       await playlist.save();
     }
 
-    res.json(playlist);
+    const populated = await Playlist.findById(playlistId).populate('idSong');
+    res.json(populated);
   } catch (error) {
     console.error('Error al añadir canción:', error);
     res.status(500).json({ error: 'Error al añadir canción a la playlist' });
   }
 };
+
 
 // Eliminar una canción de una playlist usando el ID de Deezer
 export const removeSongFromPlaylist = async (req, res) => {
