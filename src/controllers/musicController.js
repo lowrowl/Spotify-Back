@@ -2,6 +2,8 @@ import {
   getTrackByIdDeezer,
   searchDeezerTracksByArtist // ← ESTO FALTABA
 } from '../services/deezerServices.js';
+
+import { getRecommendedTracks } from '../services/deezerServices.js';
 /**
  * Buscar canciones por nombre, artista, álbum, etc.
  */
@@ -115,12 +117,12 @@ export const getHomeData = async (req, res) => {
 
 export const getRecommendations = async (req, res) => {
   try {
-    const { trackId } = req.params;
-    if (!trackId) {
-      return res.status(400).json({ error: 'trackId es requerido' });
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'id es requerido' });
     }
 
-    const recommendations = await getRecommendedTracks(trackId);
+    const recommendations = await getRecommendedTracks(id);
     return res.json(recommendations);
   } catch (error) {
     console.error('Error obteniendo recomendaciones:', error.message);
