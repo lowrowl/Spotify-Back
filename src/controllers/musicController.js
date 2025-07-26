@@ -1,21 +1,27 @@
 import {
   getTrackByIdDeezer,
-  searchDeezerTracksByArtist // ← ESTO FALTABA
+  searchTracksDeezer,
+  searchDeezerTracksByArtist,
+  getRecommendedTracks,
+  getPopularTracksDeezer,
+  getRecommendedArtists,
+  getRecommendedGenres
 } from '../services/deezerServices.js';
 
-import { getRecommendedTracks } from '../services/deezerServices.js';
+import Playlist from '../models/Playlist.js';
+
 /**
- * Buscar canciones por nombre, artista, álbum, etc.
+ * Buscar canciones por nombre (ignora el tipo por ahora)
  */
 export const searchTracks = async (req, res) => {
-  const { query, type } = req.query;
+  const { query } = req.query;
 
-  if (!query || !type) {
-    return res.status(400).json({ error: 'Faltan parámetros de búsqueda (query y type).' });
+  if (!query) {
+    return res.status(400).json({ error: 'Falta el parámetro de búsqueda (query).' });
   }
 
   try {
-    const results = await searchTracksDeezer(query, type);
+    const results = await searchTracksDeezer(query);
     res.json(results);
   } catch (error) {
     console.error('Error al buscar canciones en Deezer:', error.message);
@@ -42,18 +48,8 @@ export const getTrackById = async (req, res) => {
 };
 
 /**
- * Obtener canciones populares (top tracks)
+ * Obtener canciones similares por artista
  */
-export const getPopularTracks = async (req, res) => {
-  try {
-    const tracks = await getPopularTracksDeezer();
-    res.json(tracks);
-  } catch (error) {
-    console.error('Error al obtener canciones populares:', error.message);
-    res.status(500).json({ error: 'Error al obtener canciones populares.' });
-  }
-}
-// Nueva función para sugerencias
 export const getSimilarTracks = async (req, res) => {
   const { id } = req.params;
   console.log('🔍 Buscando canciones similares para ID:', id);
@@ -86,35 +82,9 @@ export const getSimilarTracks = async (req, res) => {
   }
 };
 
-export const getHomeData = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    // 1. Playlists del usuario
-    const playlists = await Playlist.find({ createdBy: userId }).populate('idSong');
-
-    // 2. Música recomendada (puedes tomar aleatoriamente o top charts)
-    const recommendedTracks = await deezerService.getTopTracks(10);
-
-    // 3. Artistas recomendados (pueden venir de los artistas de esas canciones)
-    const artistIds = [...new Set(recommendedTracks.flatMap(track => track.artists))];
-    const recommendedArtists = await deezerService.getArtistsByIds(artistIds.slice(0, 5));
-
-    // 4. Géneros recomendados (pueden ser los géneros de esas canciones o random)
-    const genres = [...new Set(recommendedTracks.flatMap(track => track.genres))].slice(0, 5);
-
-    return res.json({
-      playlists,
-      recommendedTracks,
-      recommendedArtists,
-      recommendedGenres: genres,
-    });
-  } catch (error) {
-    console.error('Error en getHomeData:', error);
-    res.status(500).json({ error: 'Error al cargar la pantalla de inicio' });
-  }
-};
-
+/**
+ * Obtener recomendaciones basadas en un track
+ */
 export const getRecommendations = async (req, res) => {
   try {
     const { id } = req.params;
@@ -130,7 +100,9 @@ export const getRecommendations = async (req, res) => {
   }
 };
 
-
+/**
+ * Reproducir preview de una canción por su ID
+ */
 export const playPreview = async (req, res) => {
   try {
     const { id } = req.params;
@@ -144,5 +116,29 @@ export const playPreview = async (req, res) => {
   } catch (error) {
     console.error("Error en playPreview:", error.message);
     return res.status(500).json({ error: "No se pudo redirigir al preview" });
+  }
+};
+
+/**
+ * Obtener datos para pantalla de inicio (home)
+ */
+export const getHomeData = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const playlists = await Playlist.find({ createdBy: userId }).populate('idSong');
+    const recommendedTracks = await getPopularTracksDeezer();
+    const recommendedArtists = await getRecommendedArtists();
+    const recommendedGenres = await getRecommendedGenres();
+
+    return res.json({
+      playlists,
+      recommendedTracks,
+      recommendedArtists: recommendedArtists.slice(0, 5),
+      recommendedGenres: recommendedGenres.slice(0, 5),
+    });
+  } catch (error) {
+    console.error('Error en getHomeData:', error);
+    res.status(500).json({ error: 'Error al cargar la pantalla de inicio' });
   }
 };
